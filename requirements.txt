@@ -1,0 +1,2 @@
+requests==2.30.0
+termcolor==2.3.0

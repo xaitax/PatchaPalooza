@@ -2,6 +2,8 @@
 
 A comprehensive tool that provides an insightful analysis of Microsoft's monthly security updates.
 
+<img width="755" alt="main" src="https://github.com/xaitax/PatchaPalooza/assets/5014849/02fa5585-26aa-42d6-9026-3d497bb06ac0">
+
 ## 📜 Description
 
 PatchaPalooza uses the power of Microsoft's MSRC CVRF API to fetch, store, and analyze security update data. Designed for cybersecurity professionals, it offers a streamlined experience for those who require a quick yet detailed overview of vulnerabilities, their exploitation status, and more. This tool operates entirely offline once the data has been fetched, ensuring that your analyses can continue even without an internet connection.
@@ -18,30 +20,30 @@ PatchaPalooza uses the power of Microsoft's MSRC CVRF API to fetch, store, and a
 
 ## 🚀 Usage
 
-Run PatchaPalooza without arguments to see the banner, author info, and an analysis of the current month's data:
-\```bash
+Run PatchaPalooza without arguments to see an analysis of the current month's data:
+```bash
 python PatchaPalooza.py
-\```
+```
 
 For a specific month's analysis:
-\```bash
+```bash
 python PatchaPalooza.py --month YYYY-MMM
-\```
-
-To update and store the latest data:
-\```bash
-python PatchaPalooza.py --update
-\```
+```
 
 To display a detailed view of a specific CVE:
-\```bash
+```bash
 python PatchaPalooza.py --detail CVE-ID
-\```
+```
+
+To update and store the latest data:
+```bash
+python PatchaPalooza.py --update
+```
 
 For an overall statistical overview:
-\```bash
+```bash
 python PatchaPalooza.py --stats
-\```
+```
 
 ## 📋 Requirements
 
@@ -57,8 +59,7 @@ This tool is built upon the [Microsoft's MSRC CVRF API](https://api.msrc.microso
 
 **Alexander Hagenah**
 - [Twitter](https://twitter.com/xaitax)
-- [Email](mailto:ah@primepage.de)
 
 ## ⚠️ Disclaimer
 
-This tool is meant for educational and professional purposes only. Always ensure you have the right permissions before fetching data.
+This tool is meant for educational and professional purposes only. No license, so do with it whatever you like.

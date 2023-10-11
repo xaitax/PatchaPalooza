@@ -84,20 +84,54 @@ def display_cve_details(cve_id):
                         print("-" * (len(cve_id) + 14))
 
                         # Formatting for alignment
-                        print("{:<20} {}".format("Title:", vuln.get("Title", {}).get("Value", "N/A")))
+                        print(
+                            "{:<20} {}".format(
+                                "Title:", vuln.get("Title", {}).get("Value", "N/A")
+                            )
+                        )
 
                         cvss_sets = vuln.get("CVSSScoreSets", [{}])[0]
-                        print("{:<20} {}".format("CVSS:", str(cvss_sets.get("BaseScore", "N/A"))))
-                        print("{:<20} {}".format("Vector:", cvss_sets.get("Vector", "N/A")))
+                        print(
+                            "{:<20} {}".format(
+                                "CVSS:", str(cvss_sets.get("BaseScore", "N/A"))
+                            )
+                        )
+                        print(
+                            "{:<20} {}".format(
+                                "Vector:", cvss_sets.get("Vector", "N/A")
+                            )
+                        )
 
-                        severity, exploited_status = extract_severity_and_exploitation(vuln)
-                        exploited_color = "red" if exploited_status == "Exploited" else "green"
-                        print("{:<20} {}".format("Status:", termcolor.colored(exploited_status, exploited_color)))
+                        severity, exploited_status = extract_severity_and_exploitation(
+                            vuln
+                        )
+                        exploited_color = (
+                            "red" if exploited_status == "Exploited" else "green"
+                        )
+                        print(
+                            "{:<20} {}".format(
+                                "Status:",
+                                termcolor.colored(exploited_status, exploited_color),
+                            )
+                        )
 
-                        threat_descriptions = set([threat.get("Description", {}).get("Value", "N/A") for threat in vuln.get("Threats", [])])
-                        print("{:<20} {}".format("Threat:", ", ".join(threat_descriptions)))
+                        threat_descriptions = set(
+                            [
+                                threat.get("Description", {}).get("Value", "N/A")
+                                for threat in vuln.get("Threats", [])
+                            ]
+                        )
+                        print(
+                            "{:<20} {}".format(
+                                "Threat:", ", ".join(threat_descriptions)
+                            )
+                        )
 
-                        notes = [note.get("Value", "") for note in vuln.get("Notes", []) if note.get("Type") == 1]
+                        notes = [
+                            note.get("Value", "")
+                            for note in vuln.get("Notes", [])
+                            if note.get("Type") == 1
+                        ]
                         for note in notes:
                             clean_note = BeautifulSoup(note, "html.parser").get_text()
                             print("{:<20} {}".format("Description:", clean_note))
@@ -105,13 +139,25 @@ def display_cve_details(cve_id):
                         remediations = vuln.get("Remediations", [])
                         for rem in remediations:
                             if rem.get("URL"):
-                                print("{:<20} {}".format("Remediation URL:", rem.get("URL", "N/A")))
+                                print(
+                                    "{:<20} {}".format(
+                                        "Remediation URL:", rem.get("URL", "N/A")
+                                    )
+                                )
                                 break
 
-                        acknowledgments = ", ".join([ack_dict.get("Value", "") for ack in vuln.get("Acknowledgments", []) for ack_dict in ack.get("Name", [])])
+                        acknowledgments = ", ".join(
+                            [
+                                ack_dict.get("Value", "")
+                                for ack in vuln.get("Acknowledgments", [])
+                                for ack_dict in ack.get("Name", [])
+                            ]
+                        )
                         print("{:<20} {}".format("Acknowledgments:", acknowledgments))
 
-                        references = [ref.get("URL", "N/A") for ref in vuln.get("References", [])]
+                        references = [
+                            ref.get("URL", "N/A") for ref in vuln.get("References", [])
+                        ]
                         if references:
                             print("\nReferences:")
                             for ref in references:
@@ -119,6 +165,7 @@ def display_cve_details(cve_id):
                         break
     if not found:
         print(f"No details found for {cve_id}.")
+
 
 def analyze_and_display_month_data(month):
     vulnerabilities = []
@@ -216,7 +263,9 @@ def display_statistics(vulnerabilities, month):
         [score for score in cvss_scores if score != "N/A" and float(score) >= threshold]
     )
 
-    print(termcolor.colored(f"[x] Microsoft PatchaPalooza Statistics for {month}", "blue"))
+    print(
+        termcolor.colored(f"[x] Microsoft PatchaPalooza Statistics for {month}", "blue")
+    )
     print(
         "\n    "
         + termcolor.colored("Total:", "red")
@@ -328,6 +377,7 @@ def display_overall_statistics(exploited_stats, high_cvss_stats, category_stats)
         print(f"    {category}: {count} vulnerabilities")
     print("\n")
 
+
 def main():
     parser = argparse.ArgumentParser(description="PatchaPalooza")
     parser.add_argument(
@@ -381,6 +431,7 @@ __________         __         .__          __________        .__
         display_overall_statistics(exploited_stats, high_cvss_stats, category_stats)
     else:
         analyze_and_display_month_data(args.month)
+
 
 if __name__ == "__main__":
     main()

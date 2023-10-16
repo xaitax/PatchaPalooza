@@ -4,6 +4,11 @@ A comprehensive tool that provides an insightful analysis of Microsoft's monthly
 
 <img width="755" alt="main" src="https://github.com/xaitax/PatchaPalooza/assets/5014849/d393d964-6e78-4fa2-9d5f-3a968812f002">
 
+## 🔗 Interactive Website
+
+IF you are interested in seing all this data in a live website, visit: 
+* [https://patchapalooza.com](https://patchapalooza.com)
+
 ## 📜 Description
 
 PatchaPalooza uses the power of Microsoft's MSRC CVRF API to fetch, store, and analyze security update data. Designed for cybersecurity professionals, it offers a streamlined experience for those who require a quick yet detailed overview of vulnerabilities, their exploitation status, and more. This tool operates entirely offline once the data has been fetched, ensuring that your analyses can continue even without an internet connection.

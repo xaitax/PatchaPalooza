@@ -3,43 +3,77 @@ import argparse
 import termcolor
 from collections import defaultdict
 from datetime import datetime
-import os
-import re
+from pathlib import Path
+from bs4 import BeautifulSoup
 import json
-
 
 BASE_URL = "https://api.msrc.microsoft.com/cvrf/v2.0/"
 HEADERS = {"Accept": "application/json"}
-DATA_DIR = "msrc_data"
+DATA_DIR = Path("msrc_data")
+CVSS_THRESHOLD = 8.0
+
+
+def load_json_data(file_path: Path) -> dict:
+    try:
+        with file_path.open("r") as file:
+            return json.load(file)
+    except FileNotFoundError as e:
+        print(f"File not found: {file_path} - {e}")
+    except json.JSONDecodeError as e:
+        print(f"Error decoding JSON from {file_path} - {e}")
+
+
+def ensure_directory_exists(directory: Path):
+    directory.mkdir(parents=True, exist_ok=True)
 
 
 def retrieve_all_summaries():
     endpoint = f"{BASE_URL}updates"
-    response = requests.get(endpoint, headers=HEADERS)
+    try:
+        response = requests.get(endpoint, headers=HEADERS)
+        response.raise_for_status()
+    except requests.HTTPError as e:
+        print(f"HTTP error occurred: {e.response.status_code} - {e.response.text}")
+        return []
+    except requests.RequestException as e:
+        print(f"An error occurred: {e}")
+        return []
     return response.json().get("value", [])
 
 
 def retrieve_and_store_data():
+    ensure_directory_exists(DATA_DIR)
     summaries = retrieve_all_summaries()
-
     tracked_months = []
 
-    for summary in summaries:
-        month_id = summary["ID"]
-        file_path = os.path.join(DATA_DIR, f"{month_id}.json")
-        if not os.path.exists(file_path):
-            response = requests.get(f"{BASE_URL}cvrf/{month_id}", headers=HEADERS)
-            with open(file_path, "w") as file:
-                json.dump(response.json(), file)
-            print(termcolor.colored(f"[+] Stored data for {month_id}", "green"))
+    with requests.Session() as session:
+        for summary in summaries:
+            month_id = summary["ID"]
+            file_path = DATA_DIR / f"{month_id}.json"
+            if not file_path.exists():
+                try:
+                    response = session.get(
+                        f"{BASE_URL}cvrf/{month_id}", headers=HEADERS
+                    )
+                    response.raise_for_status()
+                    with file_path.open("w") as file:
+                        json.dump(response.json(), file)
+                    print(termcolor.colored(f"[+] Stored data for {month_id}", "green"))
+                except requests.HTTPError as e:
+                    print(
+                        f"HTTP error occurred for {month_id}: {e.response.status_code} - {e.response.text}"
+                    )
+                except requests.RequestException as e:
+                    print(
+                        f"An error occurred while retrieving data for {month_id}: {e}"
+                    )
+            tracked_months.append(month_id)
 
-        tracked_months.append(month_id)
-
-    all_months = [summary["ID"] for summary in summaries]
-    if set(tracked_months) == set(all_months):
+    all_months = {summary["ID"] for summary in summaries}
+    missing_months = all_months - set(tracked_months)
+    if not missing_months:
         print(termcolor.colored("[+] Data fully updated.", "green"))
     else:
-        missing_months = set(all_months) - set(tracked_months)
         print(
             termcolor.colored(
                 f"[-] Missing data for months: {', '.join(missing_months)}", "red"
@@ -71,112 +105,81 @@ def get_cvss_score(vuln):
 
 def display_cve_details(cve_id):
     found = False
-    for file_name in os.listdir(DATA_DIR):
-        if file_name.endswith(".json"):
-            with open(os.path.join(DATA_DIR, file_name), "r") as file:
-                data = json.load(file)
-                vulnerabilities = data.get("Vulnerability", [])
-                for vuln in vulnerabilities:
-                    if vuln.get("CVE", "") == cve_id:
-                        found = True
+    for file_path in DATA_DIR.glob("*.json"):
+        data = load_json_data(file_path)
+        vulnerabilities = data.get("Vulnerability", [])
+        for vuln in vulnerabilities:
+            if vuln.get("CVE", "") == cve_id:
+                found = True
 
-                        print(termcolor.colored(f"\nDetails for {cve_id}:", "blue"))
-                        print("-" * (len(cve_id) + 14))
+                print(termcolor.colored(f"\nDetails for {cve_id}:", "blue"))
+                print("-" * (len(cve_id) + 14))
 
-                        # Formatting for alignment
-                        print(
-                            "{:<20} {}".format(
-                                "Title:", vuln.get("Title", {}).get("Value", "N/A")
-                            )
-                        )
+                print(f"{'Title:':<20} {vuln.get('Title', {}).get('Value', 'N/A')}")
+                cvss_sets = vuln.get("CVSSScoreSets", [{}])[0]
+                print(f"{'CVSS:':<20} {cvss_sets.get('BaseScore', 'N/A')}")
+                print(f"{'Vector:':<20} {cvss_sets.get('Vector', 'N/A')}")
 
-                        cvss_sets = vuln.get("CVSSScoreSets", [{}])[0]
-                        print(
-                            "{:<20} {}".format(
-                                "CVSS:", str(cvss_sets.get("BaseScore", "N/A"))
-                            )
-                        )
-                        print(
-                            "{:<20} {}".format(
-                                "Vector:", cvss_sets.get("Vector", "N/A")
-                            )
-                        )
+                severity, exploited_status = extract_severity_and_exploitation(vuln)
+                exploited_color = "red" if exploited_status == "Exploited" else "green"
+                print(
+                    f"{'Status:':<20} {termcolor.colored(exploited_status, exploited_color)}"
+                )
 
-                        severity, exploited_status = extract_severity_and_exploitation(
-                            vuln
-                        )
-                        exploited_color = (
-                            "red" if exploited_status == "Exploited" else "green"
-                        )
-                        print(
-                            "{:<20} {}".format(
-                                "Status:",
-                                termcolor.colored(exploited_status, exploited_color),
-                            )
-                        )
+                threat_descriptions = set(
+                    [
+                        threat.get("Description", {}).get("Value", "N/A")
+                        for threat in vuln.get("Threats", [])
+                    ]
+                )
+                print(f"{'Threat:':<20} {', '.join(threat_descriptions)}")
 
-                        threat_descriptions = set(
-                            [
-                                threat.get("Description", {}).get("Value", "N/A")
-                                for threat in vuln.get("Threats", [])
-                            ]
-                        )
-                        print(
-                            "{:<20} {}".format(
-                                "Threat:", ", ".join(threat_descriptions)
-                            )
-                        )
+                notes = [
+                    note.get("Value", "")
+                    for note in vuln.get("Notes", [])
+                    if note.get("Type") == 1
+                ]
+                for note in notes:
+                    clean_note = BeautifulSoup(note, "html.parser").get_text()
+                    print(f"{'Description:':<20} {clean_note}")
 
-                        notes = [
-                            note.get("Value", "")
-                            for note in vuln.get("Notes", [])
-                            if note.get("Type") == 1
-                        ]
-                        for note in notes:
-                            clean_note = BeautifulSoup(note, "html.parser").get_text()
-                            print("{:<20} {}".format("Description:", clean_note))
-
-                        remediations = vuln.get("Remediations", [])
-                        for rem in remediations:
-                            if rem.get("URL"):
-                                print(
-                                    "{:<20} {}".format(
-                                        "Remediation URL:", rem.get("URL", "N/A")
-                                    )
-                                )
-                                break
-
-                        acknowledgments = ", ".join(
-                            [
-                                ack_dict.get("Value", "")
-                                for ack in vuln.get("Acknowledgments", [])
-                                for ack_dict in ack.get("Name", [])
-                            ]
-                        )
-                        print("{:<20} {}".format("Acknowledgments:", acknowledgments))
-
-                        references = [
-                            ref.get("URL", "N/A") for ref in vuln.get("References", [])
-                        ]
-                        if references:
-                            print("\nReferences:")
-                            for ref in references:
-                                print(f"    - {ref}")
+                remediations = vuln.get("Remediations", [])
+                for rem in remediations:
+                    if rem.get("URL"):
+                        print(f"{'Remediation URL:':<20} {rem.get('URL', 'N/A')}")
                         break
+
+                acknowledgments = ", ".join(
+                    [
+                        ack_dict.get("Value", "")
+                        for ack in vuln.get("Acknowledgments", [])
+                        for ack_dict in ack.get("Name", [])
+                    ]
+                )
+                print(f"{'Acknowledgments:':<20} {acknowledgments}")
+
+                references = [
+                    ref.get("URL", "N/A") for ref in vuln.get("References", [])
+                ]
+                if references:
+                    print("\nReferences:")
+                    for ref in references:
+                        print(f"    - {ref}")
+                break
+        if found:
+            break
     if not found:
         print(f"No details found for {cve_id}.")
 
 
 def analyze_and_display_month_data(month):
-    vulnerabilities = []
-    file_path = os.path.join(DATA_DIR, f"{month}.json")
-    if not os.path.exists(file_path):
+    file_path = DATA_DIR / f"{month}.json"
+    if not file_path.exists():
         print(f"[!] No data found for {month}.")
         return
 
-    with open(file_path, "r") as file:
-        data = json.load(file)
-        vulnerabilities = data.get("Vulnerability", [])
+    data = load_json_data(file_path)
+    vulnerabilities = data.get("Vulnerability", [])
 
     display_statistics(vulnerabilities, month)
 
@@ -200,7 +203,7 @@ def analyze_and_display_month_data(month):
         if extract_severity_and_exploitation(vuln)[1] != "Exploited"
     ]
 
-    print("Exploited ({})".format(len(exploited_vulns)))
+    print(f"Exploited ({len(exploited_vulns)})")
     print("-" * 13)
     for vuln in exploited_vulns:
         cve = vuln.get("CVE", "")
@@ -238,8 +241,6 @@ def count_type(search_type, all_vulns):
 def display_statistics(vulnerabilities, month):
     exploitation_status = defaultdict(int)
     category_vulnerabilities = defaultdict(int)
-    above_threshold = 0
-    threshold = 8.0
 
     categories = [
         "Elevation of Privilege",
@@ -260,7 +261,11 @@ def display_statistics(vulnerabilities, month):
 
     cvss_scores = [get_cvss_score(vuln) for vuln in vulnerabilities]
     above_threshold = len(
-        [score for score in cvss_scores if score != "N/A" and float(score) >= threshold]
+        [
+            score
+            for score in cvss_scores
+            if score != "N/A" and float(score) >= CVSS_THRESHOLD
+        ]
     )
 
     print(
@@ -283,7 +288,7 @@ def display_statistics(vulnerabilities, month):
     )
     print(
         "    "
-        + termcolor.colored("CVSS (>= 8.0):", "red")
+        + termcolor.colored(f"CVSS (>= {CVSS_THRESHOLD}):", "red")
         + f"\t{above_threshold} vulnerabilities.\n"
     )
 
@@ -297,11 +302,10 @@ def display_statistics(vulnerabilities, month):
 
 def read_all_data_from_directory():
     all_data = {}
-    for file_name in os.listdir(DATA_DIR):
-        if file_name.endswith(".json"):
-            month_id = file_name.replace(".json", "")
-            with open(os.path.join(DATA_DIR, file_name), "r") as file:
-                all_data[month_id] = json.load(file)
+    for file_path in DATA_DIR.glob("*.json"):
+        month_id = file_path.stem
+        with file_path.open("r") as file:
+            all_data[month_id] = json.load(file)
     return all_data
 
 
@@ -380,10 +384,21 @@ def display_overall_statistics(exploited_stats, high_cvss_stats, category_stats)
 
 def main():
     parser = argparse.ArgumentParser(description="PatchaPalooza")
+
+    def valid_month(month_str):
+        try:
+            datetime.strptime(month_str, "%Y-%b")
+            return month_str
+        except ValueError:
+            raise argparse.ArgumentTypeError(
+                f"Given Month ({month_str}) not in the correct format. Expected format: YYYY-MMM."
+            )
+
     parser.add_argument(
         "--month",
         help="Specify the month for analysis in format YYYY-MMM. Defaults to current month.",
         default=datetime.now().strftime("%Y-%b"),
+        type=valid_month,
     )
     parser.add_argument(
         "--update", help="Retrieve and store latest data.", action="store_true"
@@ -397,11 +412,10 @@ def main():
 
     args = parser.parse_args()
 
-    if not os.path.exists(DATA_DIR):
-        os.makedirs(DATA_DIR)
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
 
     if not args.update and not args.stats and not args.detail:
-        banner = """
+        banner = r"""
 __________         __         .__          __________        .__                               
 \______   \_____ _/  |_  ____ |  |__ _____ \______   \_____  |  |   ____   _________________   
  |     ___/\__  \\   __\/ ___\|  |  \\__  \ |     ___/\__  \ |  |  /  _ \ /  _ \___   /\__  \  

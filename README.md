@@ -2,7 +2,7 @@
 
 A comprehensive tool that provides an insightful analysis of Microsoft's monthly security updates.
 
-<img width="755" alt="main" src="https://github.com/xaitax/PatchaPalooza/assets/5014849/d393d964-6e78-4fa2-9d5f-3a968812f002">
+<img width="788" alt="image" src="https://github.com/xaitax/PatchaPalooza/assets/5014849/f9be5f38-8238-4f3e-857c-94e5cac59be6">
 
 ## 🔗 Interactive Website
 

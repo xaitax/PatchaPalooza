@@ -6,8 +6,10 @@ A comprehensive tool that provides an insightful analysis of Microsoft's monthly
 
 ## 🔗 Interactive Website
 
-IF you are interested in seing all this data in a live website, visit: 
+For more functionality I have built a live website: 
 * [https://patchapalooza.com](https://patchapalooza.com)
+
+<img width="895" alt="image" src="https://github.com/xaitax/PatchaPalooza/assets/5014849/d983410e-9b00-431f-8f33-d34c62fb9153">
 
 ## 📜 Description
 

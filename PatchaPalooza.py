@@ -172,49 +172,42 @@ def display_cve_details(cve_id):
         print(f"No details found for {cve_id}.")
 
 
-def analyze_and_display_month_data(month):
-    file_path = DATA_DIR / f"{month}.json"
-    if not file_path.exists():
-        print(f"[!] No data found for {month}.")
+def analyze_and_display_year_data(year, mincvss):
+    months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    data_months = {}
+    
+    for month in months:
+        data_months[month] = get_month_vulnerabilities(year, month)
+
+    analyze_and_display_data(data_months, mincvss, year, "All", True)
+
+        
+def analyze_and_display_month_data(year, month, mincvss):
+
+    vulnerabilities_month = get_month_vulnerabilities(year, month)
+
+    if vulnerabilities_month is None:
         return
+
+    analyze_and_display_data({month: vulnerabilities_month}, mincvss, year, month, True)
+
+
+def get_month_vulnerabilities(year, month):
+    file_path = DATA_DIR / f"{year}-{month}.json"
+    if not file_path.exists():
+        print(f"[!] No data found for {month} month of {year} year.")
+        return None
 
     data = load_json_data(file_path)
     vulnerabilities = data.get("Vulnerability", [])
 
-    display_statistics(vulnerabilities, month)
+    return vulnerabilities
 
-    sorted_vulnerabilities = sorted(
-        vulnerabilities,
-        key=lambda x: (
-            extract_severity_and_exploitation(x)[1] == "Exploited",
-            0 if get_cvss_score(x) == "N/A" else float(get_cvss_score(x)),
-        ),
-        reverse=True,
-    )
 
-    exploited_vulns = [
-        vuln
-        for vuln in sorted_vulnerabilities
-        if extract_severity_and_exploitation(vuln)[1] == "Exploited"
-    ]
-    not_exploited_vulns = [
-        vuln
-        for vuln in sorted_vulnerabilities
-        if extract_severity_and_exploitation(vuln)[1] != "Exploited"
-    ]
-
-    print(f"Exploited ({len(exploited_vulns)})")
+def display_exploited_vulns(exploited_vulns):
+    print(f"\nExploited ({len(exploited_vulns)})")
     print("-" * 13)
     for vuln in exploited_vulns:
-        cve = vuln.get("CVE", "")
-        title = vuln.get("Title", {}).get("Value", "")
-        cvss_score = get_cvss_score(vuln)
-        print(f"    {cve} - {cvss_score} - {title}")
-    print()
-
-    print(f"Not Exploited ({len(not_exploited_vulns)})")
-    print("-" * 19)
-    for vuln in not_exploited_vulns:
         cve = vuln.get("CVE", "")
         title = vuln.get("Title", {}).get("Value", "")
         cvss_score = get_cvss_score(vuln)
@@ -237,8 +230,71 @@ def count_type(search_type, all_vulns):
                     break
     return counter
 
+def read_all_data_from_directory():
+    all_data = {}
+    for file_path in DATA_DIR.glob("*.json"):
+        month_id = file_path.stem
+        with file_path.open("r") as file:
+            data = json.load(file)
+            all_data[month_id] = data.get("Vulnerability", [])
 
-def display_statistics(vulnerabilities, month):
+    return all_data
+
+
+def analyze_and_display_data(vulnerabilities_months, mincvss, selected_year = "All", selected_month = "All", display_exploited = False):
+    vulnerabilities_counts = {}
+    exploited_counts = {}
+    category_counts = defaultdict(int)
+    all_vulnerabilities = []
+    all_exploited_vuln = []
+
+    for month, vulnerabilities in vulnerabilities_months.items():
+        
+        vulnerabilities_mincvss = [
+            vuln
+            for vuln in vulnerabilities
+            if get_cvss_score(vuln) != "N/A" and float(get_cvss_score(vuln)) >= mincvss
+        ]
+
+        all_vulnerabilities += vulnerabilities_mincvss
+        vulnerabilities_counts[month] = len(vulnerabilities_mincvss)
+
+        exploited_vulns = [
+            vuln
+            for vuln in vulnerabilities_mincvss
+            if extract_severity_and_exploitation(vuln)[1] == "Exploited"
+        ]
+
+        all_exploited_vuln += exploited_vulns
+        exploited_counts[month] = len(exploited_vulns)
+
+        for vuln in vulnerabilities_mincvss:
+            for threat in vuln.get("Threats", []):
+                if threat.get("Type") == 0:
+                    category = threat.get("Description", {}).get("Value")
+                    category_counts[category] += 1
+
+    sorted_vulnerabilities = sorted(
+        vulnerabilities_counts.items(), key=lambda x: x[1], reverse=True
+    )
+    sorted_exploited = sorted(
+        exploited_counts.items(), key=lambda x: x[1], reverse=True
+    )
+    sorted_categories = sorted(
+        category_counts.items(), key=lambda x: x[1], reverse=True
+    )
+    
+    display_overall_statistics(all_vulnerabilities, selected_year, selected_month)
+
+    if len(sorted_vulnerabilities) > 1:
+        display_monthly_distribution(sorted_vulnerabilities, sorted_exploited)
+
+    if display_exploited:
+        display_exploited_vulns(all_exploited_vuln)
+        
+
+
+def display_overall_statistics(vulnerabilities, year = "All", month = "All"):
     exploitation_status = defaultdict(int)
     category_vulnerabilities = defaultdict(int)
 
@@ -259,17 +315,14 @@ def display_statistics(vulnerabilities, month):
     for category in categories:
         category_vulnerabilities[category] = count_type(category, vulnerabilities)
 
-    cvss_scores = [get_cvss_score(vuln) for vuln in vulnerabilities]
-    above_threshold = len(
-        [
-            score
-            for score in cvss_scores
-            if score != "N/A" and float(score) >= CVSS_THRESHOLD
-        ]
-    )
-
+    time_period = "All data"
+    if year != "All":
+        time_period = year
+        if month != "All":
+            time_period=f"{year}-{month}"
+        
     print(
-        termcolor.colored(f"[x] Microsoft PatchaPalooza Statistics for {month}", "blue")
+        termcolor.colored(f"[x] Microsoft PatchaPalooza Statistics for {time_period}", "blue")
     )
     print(
         "\n    "
@@ -286,119 +339,94 @@ def display_statistics(vulnerabilities, month):
         + termcolor.colored("Not Exploited:", "red")
         + f"\t{exploitation_status['Not Exploited']} vulnerabilities."
     )
-    print(
-        "    "
-        + termcolor.colored(f"CVSS (>= {CVSS_THRESHOLD}):", "red")
-        + f"\t{above_threshold} vulnerabilities.\n"
-    )
 
     sorted_categories = sorted(
         category_vulnerabilities.items(), key=lambda x: x[1], reverse=True
     )
+    
+    print(termcolor.colored("\nVulnerability Categories:", "red"))
     for category, count in sorted_categories:
-        print(f"    {count} vulnerabilities in {category}.")
-    print("\n")
+        print(f"    {category}: {count} vulnerabilities")
 
 
-def read_all_data_from_directory():
-    all_data = {}
-    for file_path in DATA_DIR.glob("*.json"):
-        month_id = file_path.stem
-        with file_path.open("r") as file:
-            all_data[month_id] = json.load(file)
-    return all_data
+def display_monthly_distribution(sorted_vulnerabilities, exploited_stats):
 
+    top_months = len(sorted_vulnerabilities)
+    if len(sorted_vulnerabilities) > 12:
+        top_months = 5
 
-def derive_statistics_from_all_data():
-    all_data = read_all_data_from_directory()
-
-    exploited_counts = {}
-    high_cvss_counts = {}
-    category_counts = defaultdict(int)
-
-    for month, data in all_data.items():
-        vulnerabilities = data.get("Vulnerability", [])
-
-        exploited_vulns = [
-            vuln
-            for vuln in vulnerabilities
-            if extract_severity_and_exploitation(vuln)[1] == "Exploited"
-        ]
-        high_cvss_vulns = [
-            vuln
-            for vuln in vulnerabilities
-            if get_cvss_score(vuln) != "N/A" and float(get_cvss_score(vuln)) >= 8.0
-        ]
-
-        exploited_counts[month] = len(exploited_vulns)
-        high_cvss_counts[month] = len(high_cvss_vulns)
-
-        for vuln in vulnerabilities:
-            for threat in vuln.get("Threats", []):
-                if threat.get("Type") == 0:
-                    category = threat.get("Description", {}).get("Value")
-                    category_counts[category] += 1
-
-    sorted_exploited = sorted(
-        exploited_counts.items(), key=lambda x: x[1], reverse=True
-    )
-    sorted_high_cvss = sorted(
-        high_cvss_counts.items(), key=lambda x: x[1], reverse=True
-    )
-    sorted_categories = sorted(
-        category_counts.items(), key=lambda x: x[1], reverse=True
-    )
-
-    return sorted_exploited, sorted_high_cvss, sorted_categories
-
-
-(
-    sorted_exploited,
-    sorted_high_cvss,
-    sorted_categories,
-) = derive_statistics_from_all_data()
-sorted_exploited, sorted_high_cvss, sorted_categories
-
-
-def display_overall_statistics(exploited_stats, high_cvss_stats, category_stats):
-    print(termcolor.colored("\n[+] Overall Statistics from All Monthly Data", "blue"))
+    print(termcolor.colored("\n[+] Distribution accross months", "blue"))
     print("-" * 44)
 
     print(
-        termcolor.colored("\nTop 5 Months with Most Exploited Vulnerabilities:", "red")
+        termcolor.colored(f"\nTop {top_months} Months with Most Vulnerabilities:", "red")
     )
-    for month, count in exploited_stats[:5]:
-        print(f"    {month}: {count} exploited vulnerabilities")
+    
+    for month, count in sorted_vulnerabilities[:top_months]:
+        print(f"    {month}: {count}  vulnerabilities")
 
     print(
-        termcolor.colored("\nTop 5 Months with Most High CVSS Vulnerabilities:", "red")
+        termcolor.colored(f"\nTop {top_months} Months with Most Exploited Vulnerabilities:", "red")
     )
-    for month, count in high_cvss_stats[:5]:
-        print(f"    {month}: {count} vulnerabilities with CVSS >= 8.0")
 
-    print(termcolor.colored("\nVulnerability Categories Across All Months:", "red"))
-    for category, count in category_stats:
-        print(f"    {category}: {count} vulnerabilities")
-    print("\n")
+    for month, count in exploited_stats[:top_months]:
+        print(f"    {month}: {count} exploited vulnerabilities")
 
 
 def main():
     parser = argparse.ArgumentParser(description="PatchaPalooza")
 
+    def valid_year(year_str):
+        try:
+            datetime.strptime(year_str, "%Y")
+            return year_str
+        except ValueError:
+            raise argparse.ArgumentTypeError(
+                f"Given Year ({year_str}) not in the correct format. Expected format: YYYY."
+            )
+
     def valid_month(month_str):
         try:
-            datetime.strptime(month_str, "%Y-%b")
+            datetime.strptime(month_str, "%b")
             return month_str
         except ValueError:
             raise argparse.ArgumentTypeError(
-                f"Given Month ({month_str}) not in the correct format. Expected format: YYYY-MMM."
+                f"Given Month ({month_str}) not in the correct format. Expected format: MMM."
+            )
+
+    def valid_cvss(cvss_str):
+        try:
+            cvss = float(cvss_str)
+            if cvss > 10 or cvss < 0:
+                raise ValueError
+            return cvss
+        except ValueError:
+            raise argparse.ArgumentTypeError(
+                f"Given cvss ({cvss_str}) not in the correct format. Expected float between 0.0 and 10."
             )
 
     parser.add_argument(
         "--month",
         help="Specify the month for analysis in format YYYY-MMM. Defaults to current month.",
-        default=datetime.now().strftime("%Y-%b"),
+        default=datetime.now().strftime("%b"),
         type=valid_month,
+    )
+    parser.add_argument(
+        "--year",
+        help="Specify the year for analysis in format YYYY. Defaults to current year.",
+        default=datetime.now().strftime("%Y"),
+        type=valid_year,
+    )
+    parser.add_argument(
+        "--fullyear",
+        help="Specify the year for analysis in format YYYY. No default value.",
+        type=valid_year,
+    )
+    parser.add_argument(
+        "--mincvss",
+        help="Specify the minimum CVSS for vulnerabilities. Defaults to 0 (all vulnerabilities).",
+        default=0,
+        type=valid_cvss,
     )
     parser.add_argument(
         "--update", help="Retrieve and store latest data.", action="store_true"
@@ -413,9 +441,8 @@ def main():
     args = parser.parse_args()
 
     DATA_DIR.mkdir(parents=True, exist_ok=True)
-
-    if not args.update and not args.stats and not args.detail:
-        banner = r"""
+    
+    banner = r"""
 __________         __         .__          __________        .__                               
 \______   \_____ _/  |_  ____ |  |__ _____ \______   \_____  |  |   ____   _________________   
  |     ___/\__  \\   __\/ ___\|  |  \\__  \ |     ___/\__  \ |  |  /  _ \ /  _ \___   /\__  \  
@@ -423,29 +450,21 @@ __________         __         .__          __________        .__
  |____|    (____  /__|  \___  >___|  (____  /____|    (____  /____/\____/ \____/_____ \(____  /
                 \/          \/     \/     \/               \/                        \/     \/ 
         """
-        print(banner)
-        print("Alexander Hagenah / @xaitax / ah@primepage.de\n\n")
-        analyze_and_display_month_data(args.month)
-        return
-
+    print(banner)
+    print("Alexander Hagenah / @xaitax / ah@primepage.de\n\n")
+        
     if args.update:
         retrieve_and_store_data()
-        return
-
-    if args.detail:
+    elif args.detail:
         display_cve_details(args.detail)
-        return
-
-    if args.stats:
-        (
-            exploited_stats,
-            high_cvss_stats,
-            category_stats,
-        ) = derive_statistics_from_all_data()
-        display_overall_statistics(exploited_stats, high_cvss_stats, category_stats)
+    elif args.stats:
+        all_data = read_all_data_from_directory()
+        analyze_and_display_data(all_data, args.mincvss)
     else:
-        analyze_and_display_month_data(args.month)
-
+        if args.month and args.year and args.fullyear is None:
+            analyze_and_display_month_data(args.year, args.month, args.mincvss)
+        elif args.fullyear:
+            analyze_and_display_year_data(args.fullyear, args.mincvss)
 
 if __name__ == "__main__":
     main()

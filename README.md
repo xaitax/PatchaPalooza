@@ -34,7 +34,22 @@ python PatchaPalooza.py
 
 For a specific month's analysis:
 ```bash
-python PatchaPalooza.py --month YYYY-MMM
+python PatchaPalooza.py --month MMM --year YYYY
+```
+
+For a specific year's analysis:
+```bash
+python PatchaPalooza.py --fullyear YYYY
+```
+
+For an overall statistical overview:
+```bash
+python PatchaPalooza.py --stats
+```
+
+For an analysis of vulnerabilities with a minimum cvss score (can be combined in all previous use cases):
+```bash
+python PatchaPalooza.py --month MMM --year YYYY --mincvss 8
 ```
 
 To display a detailed view of a specific CVE:
@@ -45,11 +60,6 @@ python PatchaPalooza.py --detail CVE-ID
 To update and store the latest data:
 ```bash
 python PatchaPalooza.py --update
-```
-
-For an overall statistical overview:
-```bash
-python PatchaPalooza.py --stats
 ```
 
 ## 📋 Requirements

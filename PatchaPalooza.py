@@ -10,7 +10,6 @@ import json
 BASE_URL = "https://api.msrc.microsoft.com/cvrf/v2.0/"
 HEADERS = {"Accept": "application/json"}
 DATA_DIR = Path("msrc_data")
-CVSS_THRESHOLD = 8.0
 
 
 def load_json_data(file_path: Path) -> dict:
@@ -279,9 +278,6 @@ def analyze_and_display_data(vulnerabilities_months, mincvss, selected_year = "A
     )
     sorted_exploited = sorted(
         exploited_counts.items(), key=lambda x: x[1], reverse=True
-    )
-    sorted_categories = sorted(
-        category_counts.items(), key=lambda x: x[1], reverse=True
     )
     
     display_overall_statistics(all_vulnerabilities, selected_year, selected_month)

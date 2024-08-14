@@ -10,7 +10,6 @@ import json
 BASE_URL = "https://api.msrc.microsoft.com/cvrf/v3.0/"
 HEADERS = {"Accept": "application/json"}
 DATA_DIR = Path("msrc_data")
-CVSS_THRESHOLD = 8.0
 
 def load_json_data(file_path: Path) -> dict:
     try:
@@ -103,7 +102,7 @@ def display_cve_details(cve_id):
                 print(f"{'CVSS:':<20} {cvss_sets.get('BaseScore', 'N/A')}")
                 print(f"{'Vector:':<20} {cvss_sets.get('Vector', 'N/A')}")
 
-                severity, exploited_status = extract_severity_and_exploitation(vuln)
+                exploited_status = extract_severity_and_exploitation(vuln)
                 exploited_color = "red" if exploited_status == "Exploited" else "green"
                 print(f"{'Status:':<20} {colored(exploited_status, exploited_color)}")
 
@@ -211,7 +210,6 @@ def analyze_and_display_data(vulnerabilities_months, mincvss, selected_year="All
 
     sorted_vulnerabilities = sorted(vulnerabilities_counts.items(), key=lambda x: x[1], reverse=True)
     sorted_exploited = sorted(exploited_counts.items(), key=lambda x: x[1], reverse=True)
-    sorted_categories = sorted(category_counts.items(), key=lambda x: x[1], reverse=True)
 
     display_overall_statistics(all_vulnerabilities, selected_year, selected_month)
     if len(sorted_vulnerabilities) > 1:

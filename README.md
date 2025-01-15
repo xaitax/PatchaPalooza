@@ -1,3 +1,11 @@
+### Notes:  The latest release did not work for me, as it was not displaying the non exploitable, this is modified to list the entries correctly and separate into 3 parts, Exploited, Not Exploitable, and Not Exploited.
+```
+Exploited – Assigned if "Exploited:Yes" is found in a threat’s description.
+Not Exploitable – Assigned if "Exploited:No" or "Not Exploitable" appears in a threat’s description.
+Not Exploited – Assigned if neither "Exploited:Yes" nor "Exploited:No"/"Not Exploitable" appears. Essentially, this is the default if the script cannot confirm “Yes” or “No/Not Exploitable.”
+```
+Credits remain to the original author. - Nicolas
+
 # PatchaPalooza
 
 A comprehensive tool that provides an insightful analysis of Microsoft's monthly security updates.

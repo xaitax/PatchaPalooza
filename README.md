@@ -76,8 +76,12 @@ python PatchaPalooza.py --update
 - add a fullyearargument to get statistics for all months of a given year
 - remove the display of not exploited vulnerabilities (can be easily guessed, it's the complement of exploited vulnerabilities)
 
+[@dinosn](https://github.com/dinosn)
+
+- Minor fixes for the listing of Not exploitable cases
+
 Contributions are welcome. Please feel free to fork, modify, and make pull requests or report issues.
-This tool is built upon the [Microsoft's MSRC CVRF API](https://api.msrc.microsoft.com/cvrf/v2.0/swagger/index) and is inspired by the work of [@KevTheHermit](https://github.com/Immersive-Labs-Sec/msrc-api/tree/main).
+This tool is built upon the [Microsoft's MSRC CVRF API](https://github.com/microsoft/MSRC-Microsoft-Security-Updates-API) and is inspired by the work of [@KevTheHermit](https://github.com/Immersive-Labs-Sec/msrc-api/tree/main).
 
 ## 📌 Author
 

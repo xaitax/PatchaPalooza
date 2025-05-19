@@ -1,3 +1,3 @@
-beautifulsoup4==4.12.2
-Requests==2.31.0
-termcolor==2.3.0
+beautifulsoup4==4.13.3
+Requests==2.32.3
+termcolor==2.5.0

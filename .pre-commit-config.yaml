@@ -1,0 +1,30 @@
+---
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: detect-private-key
+      - id: check-added-large-files
+      - id: check-ast
+      - id: fix-byte-order-marker
+      - id: check-case-conflict
+      - id: check-docstring-first
+      - id: check-executables-have-shebangs
+      - id: check-merge-conflict
+      - id: check-yaml
+      - id: check-toml
+      - id: debug-statements
+      - id: trailing-whitespace
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.13.2
+    hooks:
+      - id: ruff
+  - repo: https://github.com/editorconfig-checker/editorconfig-checker.python
+    rev: 3.4.0
+    hooks:
+      - id: editorconfig-checker
+        alias: ec
+  - repo: https://github.com/owenlamont/uv-secure
+    rev: 0.13.0
+    hooks:
+      - id: uv-secure

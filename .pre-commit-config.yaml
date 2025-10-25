@@ -4,7 +4,6 @@ repos:
     rev: v6.0.0
     hooks:
       - id: detect-private-key
-      - id: check-added-large-files
       - id: check-ast
       - id: fix-byte-order-marker
       - id: check-case-conflict

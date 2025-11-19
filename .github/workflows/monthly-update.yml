@@ -1,0 +1,55 @@
+---
+name: Monthly Security Data Update
+
+on:
+  schedule:
+    # Run on the 15th of each month at 02:00 UTC (after Patch Tuesday)
+    - cron: "0 2 15 * *"
+  workflow_dispatch:  # Allow manual triggering
+
+permissions:
+  contents: write  # Required to commit and push changes
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for proper git operations
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Update security data
+        run: uv run python PatchaPalooza.py --update
+
+      - name: Check for changes
+        id: git-check
+        run: |
+          git diff --exit-code || echo "changes=true" >> $GITHUB_OUTPUT
+
+      - name: Commit and push changes
+        if: steps.git-check.outputs.changes == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add msrc_data/
+          git commit -m "chore: update Microsoft security data - $(date +'%Y-%m')"
+          git push
+
+      - name: Report status
+        if: steps.git-check.outputs.changes != 'true'
+        run: echo "No changes detected - data is already up to date"

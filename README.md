@@ -1,21 +1,22 @@
 # PatchaPalooza
 
-A comprehensive tool that provides an insightful analysis of Microsoft's monthly security updates.
+## [patchapalooza.com](https://patchapalooza.com) — the interactive version is live!
 
-<img width="788" alt="image" src="https://github.com/xaitax/PatchaPalooza/assets/5014849/f9be5f38-8238-4f3e-857c-94e5cac59be6">
+This CLI tool has been superseded by **[patchapalooza.com](https://patchapalooza.com)**, a full interactive website for exploring and analyzing Microsoft Patch Tuesday data. It covers everything this tool does — and much more. **Head there for the best experience.**
 
-## 🔗 Interactive Website
-
-For more functionality I have built a live website: 
-* [https://patchapalooza.com](https://patchapalooza.com)
+This repo remains available as a lightweight CLI alternative but is no longer actively maintained.
 
 ![image](https://github.com/xaitax/PatchaPalooza/assets/5014849/165f30a0-913a-4afb-9b4e-df90a36accfc)
 
-## 📜 Description
+---
+
+<img width="788" alt="image" src="https://github.com/xaitax/PatchaPalooza/assets/5014849/f9be5f38-8238-4f3e-857c-94e5cac59be6">
+
+## Description
 
 PatchaPalooza uses the power of Microsoft's MSRC CVRF API to fetch, store, and analyze security update data. Designed for cybersecurity professionals, it offers a streamlined experience for those who require a quick yet detailed overview of vulnerabilities, their exploitation status, and more. This tool operates entirely offline once the data has been fetched, ensuring that your analyses can continue even without an internet connection.
 
-## 🌟 Features
+## Features
 
 - **Retrieve Data**: Fetches the latest security update summaries directly from Microsoft.
 - **Offline Storage**: Stores the fetched data for offline analysis.
@@ -25,7 +26,7 @@ PatchaPalooza uses the power of Microsoft's MSRC CVRF API to fetch, store, and a
 - **CVSS Scoring**: Prioritize your patching efforts based on CVSS scores.
 - **Categorized Overview**: Get a breakdown of vulnerabilities based on their types.
 
-## 🚀 Usage
+## Usage
 
 Run PatchaPalooza without arguments to see an analysis of the current month's data:
 ```bash
@@ -62,13 +63,13 @@ To update and store the latest data:
 python PatchaPalooza.py --update
 ```
 
-## 📋 Requirements
+## Requirements
 
 - Python 3.x
 - Requests library
 - Termcolor library
 
-## 👏 Credits / Contributors
+## Credits / Contributors
 
 [@eric-therond](https://github.com/eric-therond)
 
@@ -83,11 +84,11 @@ python PatchaPalooza.py --update
 Contributions are welcome. Please feel free to fork, modify, and make pull requests or report issues.
 This tool is built upon the [Microsoft's MSRC CVRF API](https://github.com/microsoft/MSRC-Microsoft-Security-Updates-API) and is inspired by the work of [@KevTheHermit](https://github.com/Immersive-Labs-Sec/msrc-api/tree/main).
 
-## 📌 Author
+## Author
 
 **Alexander Hagenah**
 - [Twitter](https://twitter.com/xaitax)
 
-## ⚠️ Disclaimer
+## Disclaimer
 
 This tool is meant for educational and professional purposes only. No license, so do with it whatever you like.

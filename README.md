@@ -6,7 +6,7 @@ This CLI tool has been superseded by **[patchapalooza.com](https://patchapalooza
 
 This repo remains available as a lightweight CLI alternative but is no longer actively maintained.
 
-![image](https://github.com/xaitax/PatchaPalooza/assets/5014849/165f30a0-913a-4afb-9b4e-df90a36accfc)
+<img width="2009" height="1525" alt="image" src="https://github.com/user-attachments/assets/ad7433cd-e1ee-4e5b-97d1-fc834eb4f696" />
 
 ---
 
